@@ -80,4 +80,77 @@ describe("one path", () => {
       });
     });
   });
+  describe("non-terminal", () => {
+    describe("two segments", () => {
+      describe("success", () => {
+        it("StringNode", () => {
+          const tn = new segment.TerminalStringNode();
+          const ntn = new segment.NonTerminalStringNode(undefined, [tn]);
+          const input = ["the", "end"];
+          const expected = [
+            { matchedSegment: "the", stringValue: "the" },
+            { matchedSegment: "end", stringValue: "end" },
+          ];
+          const actual = visitNode(ntn, input);
+          expect(actual).toEqual(expected);
+        });
+        it("StaticNode", () => {
+          const tn = new segment.TerminalStaticNode("end");
+          const ntn = new segment.NonTerminalStaticNode("the", undefined, [tn]);
+          const input = ["the", "end"];
+          const expected = [
+            { matchedSegment: "the", stringValue: "the" },
+            { matchedSegment: "end", stringValue: "end" },
+          ];
+          const actual = visitNode(ntn, input);
+          expect(actual).toEqual(expected);
+        });
+      });
+      describe("failure ", () => {
+        it("not enough", () => {
+          const tn = new segment.TerminalStringNode();
+          const ntn = new segment.NonTerminalStringNode(undefined, [tn]);
+          const input = ["the"];
+          const expected: Array<segment.SegmentMatch> = [];
+          const actual = visitNode(ntn, input);
+          expect(actual).toEqual(expected);
+        });
+        it("too much", () => {
+          const tn = new segment.TerminalStringNode();
+          const ntn = new segment.NonTerminalStringNode(undefined, [tn]);
+          const input = ["the", "end", "and"];
+          const expected: Array<segment.SegmentMatch> = [];
+          const actual = visitNode(ntn, input);
+          expect(actual).toEqual(expected);
+        });
+        it("bad match", () => {
+          const tn = new segment.TerminalStaticNode("end");
+          const ntn = new segment.NonTerminalStaticNode("the", undefined, [tn]);
+          const input = ["the", "beginning"];
+          const expected: Array<segment.SegmentMatch> = [];
+          const actual = visitNode(ntn, input);
+          expect(actual).toEqual(expected);
+        });
+      });
+    });
+  });
+});
+describe("choices", () => {
+  describe("one gen", () => {
+    it("success", () => {
+      const wrongTn = new segment.TerminalStaticNode("beginning", "wrong end");
+      const tn = new segment.TerminalStaticNode("end", "right end");
+      const ntn = new segment.NonTerminalStringNode("non-terminal", [
+        wrongTn,
+        tn,
+      ]);
+      const input = ["the", "end"];
+      const expected = [
+        { matchedSegment: "the", stringValue: "the" },
+        { matchedSegment: "end", stringValue: "end" },
+      ];
+      const actual = visitNode(ntn, input);
+      expect(actual).toEqual(expected);
+    });
+  });
 });

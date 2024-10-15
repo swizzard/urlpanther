@@ -7,10 +7,15 @@ export default function visitNode(
 ): Array<SegmentMatch> {
   // this shouldn't ever happen
   if (segments.length === 0) {
+    console.error("segments is empty");
     return progress;
+  }
+  if (node.label) {
+    console.log(`visiting ${node.label} with ${segments}`);
   }
   const [_segment, ...rest] = segments;
   const res = node.accept(segments);
+  console.log(`got res: ${JSON.stringify(res)}`);
   if (res === null) {
     return [];
   } else {

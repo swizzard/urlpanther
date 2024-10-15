@@ -12,6 +12,7 @@ export type SegmentMatch = { matchedSegment: string; label?: string } & (
 export interface SegmentNode {
   accept: (segments: Array<string>) => SegmentMatch | null;
   children: Array<SegmentNode>;
+  label?: string;
 }
 
 class _SegmentNode implements SegmentNode {
@@ -33,7 +34,14 @@ class _SegmentNode implements SegmentNode {
     return { matchedSegment: segment, label: this.label, stringValue: segment };
   }
 }
-export class NonTerminalStringNode extends _SegmentNode {}
+export class NonTerminalStringNode extends _SegmentNode {
+  constructor(label?: string, children?: Array<_SegmentNode>) {
+    super(label);
+    if (children) {
+      this.children = children;
+    }
+  }
+}
 export class TerminalStringNode extends NonTerminalStringNode {
   constructor(label?: string) {
     super(label);
@@ -42,9 +50,12 @@ export class TerminalStringNode extends NonTerminalStringNode {
 }
 export class NonTerminalStaticNode extends _SegmentNode {
   toMatch: string;
-  constructor(toMatch: string, label?: string) {
+  constructor(toMatch: string, label?: string, children?: Array<_SegmentNode>) {
     super(label);
     this.toMatch = toMatch;
+    if (children) {
+      this.children = children;
+    }
   }
   matchSegment(segment: string): SegmentMatch | null {
     if (segment === this.toMatch) {
@@ -65,6 +76,12 @@ export class TerminalStaticNode extends NonTerminalStaticNode {
 }
 
 export class NonTerminalNumberNode extends _SegmentNode {
+  constructor(label?: string, children?: Array<_SegmentNode>) {
+    super(label);
+    if (children) {
+      this.children = children;
+    }
+  }
   matchSegment(segment: string): SegmentMatch | null {
     const numberValue = parseFloat(segment);
     if (isNaN(numberValue)) {
@@ -80,6 +97,12 @@ export class TerminalNumberNode extends NonTerminalNumberNode {
   }
 }
 export class NonTerminalDateNode extends _SegmentNode {
+  constructor(label?: string, children?: Array<_SegmentNode>) {
+    super(label);
+    if (children) {
+      this.children = children;
+    }
+  }
   matchSegment(segment: string): SegmentMatch | null {
     const dateValue = new Date(segment);
     if (isNaN(dateValue.getTime())) {
@@ -95,6 +118,12 @@ export class TerminalDateNode extends NonTerminalDateNode {
   }
 }
 export class NonTerminalOtherNode extends _SegmentNode {
+  constructor(label?: string, children?: Array<_SegmentNode>) {
+    super(label);
+    if (children) {
+      this.children = children;
+    }
+  }
   matchSegment(segment: string): SegmentMatch | null {
     return { matchedSegment: segment, label: this.label, otherValue: segment };
   }
