@@ -1,113 +1,129 @@
-export enum SegmentType {
-  String,
-  Number,
-  Date,
-  Terminus,
-}
-export type MatchResult = {
-  name?: string;
-  value: any;
-  type: SegmentType;
+export type StringMatch = { stringValue: string };
+export type NumberMatch = { numberValue: number };
+export type DateMatch = { dateValue: Date };
+export type OtherMatch = { otherValue: unknown };
+export type SegmentMatch = { matchedSegment: string; label?: string } & (
+  | StringMatch
+  | NumberMatch
+  | DateMatch
+  | OtherMatch
+);
+export type SegmentNode = {
+  label?: string;
+  accept: (segments: Array<string>) => SegmentMatch | null;
+  children: Array<SegmentNode>;
 };
 
-export interface StringMatchResult extends MatchResult {
-  name?: string;
-  value: any;
-  type: SegmentType.String;
-}
-export interface NumberMatchResult extends MatchResult {
-  name?: string;
-  value: any;
-  type: SegmentType.Number;
-}
-export interface DateMatchResult extends MatchResult {
-  name?: string;
-  value: any;
-  type: SegmentType.Date;
-}
-export interface TerminusMatchResult extends MatchResult {
-  name?: string;
-  value: any;
-  type: SegmentType.Terminus;
-}
-export function unwrapStringMatchResult({ name, value }: StringMatchResult): {
-  name?: string;
-  value: string;
-} {
-  return { name, value };
-}
-export function unwrapNumberMatchResult({ name, value }: StringMatchResult): {
-  name?: string;
-  value: number;
-} {
-  return { name, value: value as number };
-}
-export function unwrapDateMatchResult({ name, value }: StringMatchResult): {
-  name?: string;
-  value: Date;
-} {
-  return { name, value: value as Date };
-}
-export function unwrapTerminusMatchResult({ name }: StringMatchResult): {
-  name?: string;
-  value: undefined;
-} {
-  return { name, value: undefined };
-}
-export function isTerminus({ type }: MatchResult): boolean {
-  return type === SegmentType.Terminus;
+export function visitNode(
+  node: SegmentNode,
+  segments: Array<string>,
+  progress: Array<SegmentMatch> = [],
+): Array<SegmentMatch> {
+  // this shouldn't ever happen
+  if (segments.length === 0) {
+    return progress;
+  }
+  const [_segment, ...rest] = segments;
+  const res = node.accept(segments);
+  if (res === null) {
+    return [];
+  } else {
+    const newProgress = [...progress, res];
+    for (const child of node.children) {
+      const childRes = visitNode(child, rest, newProgress);
+      if (childRes.length >= 0) {
+        return childRes;
+      }
+    }
+    return newProgress;
+  }
 }
 
-export interface Segment {
-  match(input: string): MatchResult | null;
+function _node(label?: string): Pick<SegmentNode, "label" | "children"> {
+  return { label, children: [] };
 }
 
-export function makeStatic(toMatch: string, name: string | undefined): Segment {
+export function StringNode(label?: string): SegmentNode {
   return {
-    match: (input: string) => {
-      if (input === toMatch) {
-        return { name, value: toMatch, type: SegmentType.String };
+    accept: (segments: Array<string>) => {
+      if (segments.length === 0) {
+        return null;
+      }
+      const matchedSegment = segments[0];
+      return { matchedSegment, stringValue: matchedSegment, label };
+    },
+    ..._node(label),
+  };
+}
+export function StaticNode(toMatch: string, label?: string): SegmentNode {
+  return {
+    accept: (segments: Array<string>) => {
+      if (segments.length === 0) {
+        return null;
+      }
+      const matchedSegment = segments[0];
+      if (matchedSegment === toMatch) {
+        return { matchedSegment, stringValue: matchedSegment, label };
       } else {
         return null;
       }
     },
+    ..._node(label),
   };
 }
 
-export function makeNumber(name: string | undefined): Segment {
+export function NumberNode(label?: string): SegmentNode {
   return {
-    match: (input: string) => {
-      const parsed = parseFloat(input);
-      if (!isNaN(parsed)) {
-        return { name, value: parsed, type: SegmentType.Number };
-      } else {
+    accept: (segments: Array<string>) => {
+      if (segments.length === 0) {
         return null;
       }
+      const matchedSegment = segments[0];
+      const numberValue = parseFloat(matchedSegment);
+      if (isNaN(numberValue)) {
+        return null;
+      }
+      return { matchedSegment, numberValue, label };
     },
+    ..._node(label),
   };
 }
 
-export function makeDate(name: string | undefined): Segment {
+export function DateNode(label?: string): SegmentNode {
   return {
-    match: (input: string) => {
-      const value = new Date(input);
-      if (isNaN(value.valueOf())) {
+    accept: (segments: Array<string>) => {
+      if (segments.length === 0) {
         return null;
-      } else {
-        return { name, value, type: SegmentType.Date };
       }
+      const matchedSegment = segments[0];
+      const dateValue = new Date(matchedSegment);
+      if (isNaN(dateValue.getTime())) {
+        return null;
+      }
+      return { matchedSegment, dateValue, label };
     },
+    ..._node(label),
   };
 }
 
-export function makeTerminus(name: string | undefined): Segment {
+export function OtherNode(label?: string): SegmentNode {
   return {
-    match: (input: string) => {
-      if (!input.length) {
-        return { name, value: undefined, type: SegmentType.Terminus };
-      } else {
+    accept: (segments: Array<string>) => {
+      if (segments.length === 0) {
         return null;
       }
+      const matchedSegment = segments[0];
+      return { matchedSegment, otherValue: matchedSegment, label };
     },
+    ..._node(label),
   };
+}
+
+export function addChildren(
+  node: SegmentNode,
+  children: Array<SegmentNode>,
+): SegmentNode {
+  // mutate in-place
+  node.children = [...node.children, ...children];
+  return node;
 }
